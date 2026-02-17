@@ -1,0 +1,11 @@
+# Scarb / Cairo
+target/
+**/target/
+.cairo/
+# Starknet Foundry
+snfoundry_cache/
+.snfoundry/
+artifacts/
+# OS / Editor
+.DS_Store
+.vscode/
