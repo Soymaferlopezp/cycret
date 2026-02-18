@@ -1,0 +1,12 @@
+# snfoundry.toml (repo root)
+# Purpose: make snforge/sncast deterministic when run from repository root.
+
+[profile.default]
+# Keep Foundry anchored to the contracts package layout
+src = "contracts/src"
+test = "contracts/tests"
+out = "contracts/target/foundry"
+
+[rpc]
+# Prefer env var in local shells / CI. Do NOT commit keys.
+url = "${STARKNET_RPC_URL}"
