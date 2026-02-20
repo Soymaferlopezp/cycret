@@ -182,3 +182,26 @@ Recommended order:
 - wrong level order (0..9)
 - forgetting `*` on `Array::at()`
 - incrementing `next_index` before transfer/insert succeeds
+
+## Merkle Optimization — filled_subtrees update (Refinement Phase)
+
+### What changed
+Previously, `insert_leaf` updated `filled_subtrees` by rebuilding the full 10-element array every time
+a level needed to store the “left” node (via a helper like `set_filled_at`). This was correct but added
+avoidable overhead inside the per-level loop.
+
+We refactored `insert_leaf` to:
+- Load `filled_subtrees` once into 10 local mutable variables (`f0..f9`)
+- Update only the touched level when the inserted node is a left child
+- Read the cached left sibling from the corresponding local variable when the node is a right child
+- Rebuild the output `Array<felt252>` only once at the end
+
+### Guarantees
+- Public API unchanged (`insert_leaf(index, leaf, filled) -> (root, filled)`)
+- Storage layout unchanged (the contract still stores `filled_subtrees` as `Map<u8, felt252>`)
+- Deterministic root behavior preserved (tests confirm roots for the same inserts remain identical)
+
+### Outcome
+- Reduced per-insert overhead by avoiding repeated array reconstruction
+- Existing tests still pass
+- Measured test gas for 3 inserts decreased in the integration tests output

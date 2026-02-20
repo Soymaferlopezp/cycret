@@ -75,39 +75,40 @@ pub fn initial_filled_subtrees() -> Array<felt252> {
     filled
 }
 
-// Rebuild filled array with filled[pos] = val (len is always 10 so explicit is fine)
-fn set_filled_at(filled: Array<felt252>, pos: u32, val: felt252) -> Array<felt252> {
-    let a0: felt252 = *filled.at(0_usize);
-    let a1: felt252 = *filled.at(1_usize);
-    let a2: felt252 = *filled.at(2_usize);
-    let a3: felt252 = *filled.at(3_usize);
-    let a4: felt252 = *filled.at(4_usize);
-    let a5: felt252 = *filled.at(5_usize);
-    let a6: felt252 = *filled.at(6_usize);
-    let a7: felt252 = *filled.at(7_usize);
-    let a8: felt252 = *filled.at(8_usize);
-    let a9: felt252 = *filled.at(9_usize);
+fn level_to_usize(level: u32) -> usize {
+    match level {
+        0_u32 => 0_usize,
+        1_u32 => 1_usize,
+        2_u32 => 2_usize,
+        3_u32 => 3_usize,
+        4_u32 => 4_usize,
+        5_u32 => 5_usize,
+        6_u32 => 6_usize,
+        7_u32 => 7_usize,
+        8_u32 => 8_usize,
+        _ => 9_usize,
+    }
+}
 
-    let mut out: Array<felt252> = ArrayTrait::new();
-
-    out.append(if pos == 0_u32 { val } else { a0 });
-    out.append(if pos == 1_u32 { val } else { a1 });
-    out.append(if pos == 2_u32 { val } else { a2 });
-    out.append(if pos == 3_u32 { val } else { a3 });
-    out.append(if pos == 4_u32 { val } else { a4 });
-    out.append(if pos == 5_u32 { val } else { a5 });
-    out.append(if pos == 6_u32 { val } else { a6 });
-    out.append(if pos == 7_u32 { val } else { a7 });
-    out.append(if pos == 8_u32 { val } else { a8 });
-    out.append(if pos == 9_u32 { val } else { a9 });
-
-    out
+fn get_filled(level: u32, f0: felt252, f1: felt252, f2: felt252, f3: felt252, f4: felt252, f5: felt252, f6: felt252, f7: felt252, f8: felt252, f9: felt252) -> felt252 {
+    match level {
+        0_u32 => f0,
+        1_u32 => f1,
+        2_u32 => f2,
+        3_u32 => f3,
+        4_u32 => f4,
+        5_u32 => f5,
+        6_u32 => f6,
+        7_u32 => f7,
+        8_u32 => f8,
+        _ => f9,
+    }
 }
 
 pub fn insert_leaf(
     index: u32,
     leaf: felt252,
-    mut filled_subtrees: Array<felt252>,
+    filled_subtrees: Array<felt252>,
 ) -> (felt252, Array<felt252>) {
     if index >= CAPACITY {
         panic!("TREE_FULL");
@@ -119,6 +120,18 @@ pub fn insert_leaf(
 
     let zeros = build_zeros();
 
+    // Load filled_subtrees once into locals (optimization)
+    let mut f0: felt252 = *filled_subtrees.at(0_usize);
+    let mut f1: felt252 = *filled_subtrees.at(1_usize);
+    let mut f2: felt252 = *filled_subtrees.at(2_usize);
+    let mut f3: felt252 = *filled_subtrees.at(3_usize);
+    let mut f4: felt252 = *filled_subtrees.at(4_usize);
+    let mut f5: felt252 = *filled_subtrees.at(5_usize);
+    let mut f6: felt252 = *filled_subtrees.at(6_usize);
+    let mut f7: felt252 = *filled_subtrees.at(7_usize);
+    let mut f8: felt252 = *filled_subtrees.at(8_usize);
+    let mut f9: felt252 = *filled_subtrees.at(9_usize);
+
     let mut cur: felt252 = leaf;
     let mut idx: u32 = index;
 
@@ -128,29 +141,31 @@ pub fn insert_leaf(
             break;
         }
 
-        let li: usize = match level {
-            0_u32 => 0_usize,
-            1_u32 => 1_usize,
-            2_u32 => 2_usize,
-            3_u32 => 3_usize,
-            4_u32 => 4_usize,
-            5_u32 => 5_usize,
-            6_u32 => 6_usize,
-            7_u32 => 7_usize,
-            8_u32 => 8_usize,
-            _ => 9_usize,
-        };
-
         let is_right = (idx & 1_u32) == 1_u32;
+        let li: usize = level_to_usize(level);
 
         if !is_right {
+            // left child: sibling is zeros[level], and we update filled[level] = cur
             let left: felt252 = cur;
             let right: felt252 = *zeros.at(li);
 
-            filled_subtrees = set_filled_at(filled_subtrees, level, cur);
+            match level {
+                0_u32 => { f0 = cur; },
+                1_u32 => { f1 = cur; },
+                2_u32 => { f2 = cur; },
+                3_u32 => { f3 = cur; },
+                4_u32 => { f4 = cur; },
+                5_u32 => { f5 = cur; },
+                6_u32 => { f6 = cur; },
+                7_u32 => { f7 = cur; },
+                8_u32 => { f8 = cur; },
+                _ => { f9 = cur; },
+            };
+
             cur = pedersen2(left, right);
         } else {
-            let left: felt252 = *filled_subtrees.at(li);
+            // right child: sibling is filled[level]
+            let left: felt252 = get_filled(level, f0, f1, f2, f3, f4, f5, f6, f7, f8, f9);
             let right: felt252 = cur;
 
             cur = pedersen2(left, right);
@@ -160,5 +175,18 @@ pub fn insert_leaf(
         level += 1_u32;
     };
 
-    (cur, filled_subtrees)
+    // Rebuild output array once
+    let mut out: Array<felt252> = ArrayTrait::new();
+    out.append(f0);
+    out.append(f1);
+    out.append(f2);
+    out.append(f3);
+    out.append(f4);
+    out.append(f5);
+    out.append(f6);
+    out.append(f7);
+    out.append(f8);
+    out.append(f9);
+
+    (cur, out)
 }
